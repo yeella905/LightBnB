@@ -147,15 +147,14 @@ const getAllProperties = function (options, limit) {
       conditions.push(`owner_id = $${queryParams.length}`);
     }
 
-    // console.log(queryString, queryParams);
     if (options.minimum_price_per_night ) {
-        conditions.push(`properties.cost_per_night >= $${queryParams.length + 1}`);
         queryParams.push(options.minimum_price_per_night * 100); // Convert to cents
+        conditions.push(`properties.cost_per_night >= $${queryParams.length + 1}`);
     }
 
     if (options.maximum_price_per_night) {
-        conditions.push(`properties.maximum_price_per_night <= $${queryParams.length +1}`)
-        queryParams.push (options.maximum_price_per_night * 100)
+        queryParams.push (options.maximum_price_per_night * 100);
+        conditions.push(`properties.cost_per_night <= $${queryParams.length +1}`)
     }
 
     if (options.minimum_rating) {
@@ -163,11 +162,10 @@ const getAllProperties = function (options, limit) {
         queryParams.push (options.minimum_rating)
     }
 
-  
     if (conditions.length > 0) {
         queryString += `WHERE ${conditions.join(' AND ')} `;
     }
-    
+
       // 4
     queryParams.push(limit);
     queryString += `
@@ -201,9 +199,28 @@ const getAllProperties = function (options, limit) {
 const addProperty = function (property) {
   const propertyId = Object.keys(properties).length + 1;
   property.id = propertyId;
-  properties[propertyId] = property;
-  return Promise.resolve(property);
+  
+  const queryString = "INSERT INTO properties (owner_id, title, description, thumbnail_photo_url, cover_photo_url, cost_per_night, parking_spaces, number_of_bathrooms, number_of_bedrooms, country, street, city, province, post_code) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)"
+
+  const values = [property.owner_id, property.title, property.description, property.thumbnail_photo_url, property.cover_photo_url, property.cost_per_night, property.parking_spaces, property.number_of_bathrooms, property.number_of_bedrooms, property.country, property.street, property.city, property.province, property.post_code]
+  
+  return pool
+  .query(
+  queryString, values)
+
+  .then((result) => {
+      
+    return Promise.resolve(result);
+  })
+  .catch((err) => {
+    console.log(err.message);
+  });
+
 };
+
+
+//   property.id = propertyId;
+//   properties[propertyId] = property;
 
 module.exports = {
   getUserWithEmail,
