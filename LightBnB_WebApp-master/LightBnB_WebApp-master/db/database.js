@@ -126,18 +126,66 @@ const getAllReservations = function (guest_id, limit = 10) {
  * @return {Promise<[{}]>}  A promise to the properties.
  */
 const getAllProperties = function (options, limit) {
+// console.log(options)
+    const queryParams = [];
+    // 2
+    let queryString = `
+    SELECT properties.*, avg(property_reviews.rating) as average_rating
+    FROM properties
+    JOIN property_reviews ON properties.id = property_id
+    `;
+    // const values = [limit || 10]
+    const conditions = [];
+// console.log(options.minimum_cost)
+    if (options.city) {
+        queryParams.push(`%${options.city}%`);
+        queryString += `WHERE city LIKE $${queryParams.length} `;
+    }
 
-    const queryString = `SELECT * FROM properties 
-    LIMIT $1`
+    if (options.owner_id) {
+      queryParams.push(`%${options.owner_id}%`);
+      conditions.push(`owner_id = $${queryParams.length}`);
+    }
 
-    const values = [limit || 10]
+    // console.log(queryString, queryParams);
+    if (options.minimum_price_per_night ) {
+        conditions.push(`properties.cost_per_night >= $${queryParams.length + 1}`);
+        queryParams.push(options.minimum_price_per_night * 100); // Convert to cents
+    }
+
+    if (options.maximum_price_per_night) {
+        conditions.push(`properties.maximum_price_per_night <= $${queryParams.length +1}`)
+        queryParams.push (options.maximum_price_per_night * 100)
+    }
+
+    if (options.minimum_rating) {
+        conditions.push(`avg(property_review.rating) >= $${queryParams.length +1}`)
+        queryParams.push (options.minimum_rating)
+    }
+
+  
+    if (conditions.length > 0) {
+        queryString += `WHERE ${conditions.join(' AND ')} `;
+    }
     
+      // 4
+    queryParams.push(limit);
+    queryString += `
+    GROUP BY properties.id
+    ORDER BY cost_per_night
+    LIMIT $${queryParams.length};
+    `;
+
+    // 5
+    console.log(queryString, queryParams);
+
+    //6
     return pool
     .query(
-    queryString, values)
+        queryString, queryParams)
 
     .then((result) => {
-        
+       console.log(result) 
       return Promise.resolve(result.rows);
     })
     .catch((err) => {
