@@ -205,7 +205,7 @@ const addProperty = function (property) {
 
   .then((result) => {
       
-    return Promise.resolve(result);
+    return Promise.resolve(result.rows[0]);
   })
   .catch((err) => {
     console.log(err.message);
