@@ -102,7 +102,7 @@ const getAllReservations = function (guest_id, limit = 10) {
     INNER JOIN properties on reservations.property_id = properties.id WHERE reservations.guest_id = $1
     LIMIT $2`
 
-    const values = [820, limit]
+    const values = [guest_id, limit]
     
     return pool
     .query(
@@ -132,34 +132,34 @@ const getAllProperties = function (options, limit) {
     let queryString = `
     SELECT properties.*, avg(property_reviews.rating) as average_rating
     FROM properties
-    JOIN property_reviews ON properties.id = property_id
+    JOIN property_reviews ON properties.id = property_reviews.property_id
     `;
     // const values = [limit || 10]
     const conditions = [];
 // console.log(options.minimum_cost)
     if (options.city) {
         queryParams.push(`%${options.city}%`);
-        queryString += `WHERE city LIKE $${queryParams.length} `;
+        conditions.push(` city LIKE $${queryParams.length}`);
     }
 
     if (options.owner_id) {
-      queryParams.push(`%${options.owner_id}%`);
-      conditions.push(`owner_id = $${queryParams.length}`);
+        queryParams.push(`%${options.owner_id}%`);
+        conditions.push(`owner_id = $${queryParams.length}`);
     }
 
     if (options.minimum_price_per_night ) {
         queryParams.push(options.minimum_price_per_night * 100); // Convert to cents
-        conditions.push(`properties.cost_per_night >= $${queryParams.length + 1}`);
+        conditions.push(`properties.cost_per_night >= $${queryParams.length}`);
     }
 
     if (options.maximum_price_per_night) {
         queryParams.push (options.maximum_price_per_night * 100);
-        conditions.push(`properties.cost_per_night <= $${queryParams.length +1}`)
+        conditions.push(`properties.cost_per_night <= $${queryParams.length}`)
     }
 
     if (options.minimum_rating) {
-        conditions.push(`avg(property_review.rating) >= $${queryParams.length +1}`)
         queryParams.push (options.minimum_rating)
+        conditions.push(`property_reviews.rating >= $${queryParams.length}`)
     }
 
     if (conditions.length > 0) {
@@ -170,7 +170,7 @@ const getAllProperties = function (options, limit) {
     queryParams.push(limit);
     queryString += `
     GROUP BY properties.id
-    ORDER BY cost_per_night
+    ORDER BY properties.cost_per_night
     LIMIT $${queryParams.length};
     `;
 
